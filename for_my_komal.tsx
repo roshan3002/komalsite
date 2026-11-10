@@ -1,0 +1,1467 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Heart,
+  Music,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Sparkles,
+  Mail,
+  MailOpen,
+  ArrowUp,
+  Camera,
+  CheckCircle2,
+  Stars,
+  Gift,
+  Smile,
+  MessageCircleHeart,
+  Upload,
+  X,
+  Settings2,
+  EyeOff,
+  Eye
+} from 'lucide-react';
+
+/**
+ * ============================================================================
+ * 💖 PERMANENT & REPLACEABLE ASSET CONFIGURATION (EASY TO EDIT) 💖
+ * ============================================================================
+ * 1. Your uploaded files from this session are pre-configured as primary sources.
+ * 2. Standard folder paths (/assets/background.jpg & /assets/romantic-song.mp3)
+ *    are also linked as automatic fallbacks when hosting locally or on Vercel/Netlify.
+ * 3. You can also click the discreet "📷🎵" button in the top-left corner at any
+ *    time to select your local image/audio file directly in the browser!
+ * ============================================================================
+ */
+const ASSETS_CONFIG = {
+  // Primary uploaded image & standard /assets/background.jpg path
+  primaryBackground: 'WhatsApp Image 2026-11-10 at 2.54.38 PM.jpeg',
+  standardBackground: '/assets/background.jpg',
+  // Romantic artistic fallback if running in an isolated preview before file mount
+  fallbackBackground:
+    'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=1600&q=85',
+
+  // Primary uploaded song & standard /assets/romantic-song.mp3 path
+  primaryAudio: 'video_1.mpeg',
+  standardAudio: '/assets/romantic-song.mp3',
+};
+
+// Lyrics from your uploaded song ("Suno Na Komal...") to display in a subtle romantic ticker
+const SONG_LYRICS = [
+  '🎵 "Suno na Komal... Ek baat kahoon tumse..."',
+  '🎵 "Naraaz ho tum mujhse, par pyaar toh hai na dil mein..."',
+  '🎵 "Teri khamoshi dil ko satati hai, teri naraazgi raaton ko jagati hai..."',
+  '🎵 "Galti hui hai toh maaf kar dena, teri hasi hi toh mujhe jeena sikhati hai..."',
+  '🎵 "Bas ek baar muskura do meri jaan, tere bina adhoori hai meri har khushi..."',
+  '🎵 "Komal, maan bhi jao na... Ab yun na mujhko satao na..."',
+  '🎵 "Komal, tum meri jaan ho, meri har khushi ki pehchaan ho..."',
+  '🎵 "Tumhari ek smile ke liye, main hazaar baar sorry bol sakta hoon ❤️"'
+];
+
+/**
+ * Web Audio API Romantic Piano/Music-Box Synthesizer Fallback
+ * Ensures that even if the sandbox browser cannot resolve the local .mpeg path
+ * before user upload, a tender, emotional romantic melody still plays seamlessly!
+ */
+class RomanticPianoSynth {
+  constructor() {
+    this.ctx = null;
+    this.isPlaying = false;
+    this.isMuted = false;
+    this.intervalId = null;
+    this.step = 0;
+    // Emotional romantic chord progression melody notes (frequencies in Hz)
+    this.melody = [
+      { note: 523.25, bass: 261.63, dur: 1.4 }, // C5 + C4
+      { note: 659.25, bass: 329.63, dur: 1.2 }, // E5
+      { note: 587.33, bass: 392.00, dur: 1.4 }, // D5
+      { note: 493.88, bass: 246.94, dur: 1.6 }, // B4 + B3
+      { note: 440.00, bass: 220.00, dur: 1.4 }, // A4 + A3
+      { note: 523.25, bass: 261.63, dur: 1.2 }, // C5
+      { note: 440.00, bass: 329.63, dur: 1.4 }, // A4
+      { note: 392.00, bass: 196.00, dur: 1.8 }, // G4 + G3
+      { note: 349.23, bass: 174.61, dur: 1.4 }, // F4 + F3
+      { note: 440.00, bass: 220.00, dur: 1.2 }, // A4
+      { note: 523.25, bass: 261.63, dur: 1.5 }, // C5
+      { note: 493.88, bass: 196.00, dur: 1.4 }, // B4 + G3
+      { note: 392.00, bass: 246.94, dur: 1.4 }, // G4
+      { note: 587.33, bass: 293.66, dur: 1.8 }, // D5
+    ];
+  }
+
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  playNote(freq, duration, volume = 0.08) {
+    if (!this.ctx || this.isMuted) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (e) {
+      // Ignore audio context restrictions
+    }
+  }
+
+  start() {
+    this.init();
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+
+    const triggerNext = () => {
+      if (!this.isPlaying) return;
+      const item = this.melody[this.step % this.melody.length];
+      this.playNote(item.note, item.dur, 0.07);
+      if (item.bass) {
+        setTimeout(() => {
+          if (this.isPlaying) this.playNote(item.bass, item.dur * 1.2, 0.04);
+        }, 180);
+      }
+      this.step++;
+    };
+
+    triggerNext();
+    this.intervalId = setInterval(triggerNext, 1150);
+  }
+
+  pause() {
+    this.isPlaying = false;
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+  }
+
+  setMuted(muted) {
+    this.isMuted = muted;
+  }
+}
+
+export default function App() {
+  // Experience & Navigation State
+  const [surpriseOpened, setSurpriseOpened] = useState(false);
+  const [envelopeOpen, setEnvelopeOpen] = useState(false);
+  const [forgivenessStatus, setForgivenessStatus] = useState(null); // 'forgiven' | 'manana' | null
+  const [extraCouponsClaimed, setExtraCouponsClaimed] = useState([]);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  // Interactive Questions State
+  const [answers, setAnswers] = useState({
+    q1: null,
+    q2: null,
+    q3: null,
+  });
+
+  // Custom Assets & Media State
+  const [bgImageSrc, setBgImageSrc] = useState(ASSETS_CONFIG.primaryBackground);
+  const [usingFallbackBg, setUsingFallbackBg] = useState(false);
+  const [audioSrc, setAudioSrc] = useState(ASSETS_CONFIG.primaryAudio);
+  const [showAssetModal, setShowAssetModal] = useState(false);
+
+  // Audio Player State
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [useSynthFallback, setUseSynthFallback] = useState(false);
+  const [lyricIndex, setLyricIndex] = useState(0);
+
+  // Burst hearts on click
+  const [burstHearts, setBurstHearts] = useState([]);
+
+  // Welcome Typing State
+  const [typedLine1, setTypedLine1] = useState('');
+  const [typedLine2, setTypedLine2] = useState('');
+
+  // Refs
+  const audioRef = useRef(null);
+  const synthRef = useRef(null);
+  const apologySectionRef = useRef(null);
+
+  // Initialize synth fallback instance
+  useEffect(() => {
+    synthRef.current = new RomanticPianoSynth();
+    return () => {
+      if (synthRef.current) synthRef.current.pause();
+    };
+  }, []);
+
+  // Preload & test image path resolution (Primary -> /assets/background.jpg -> Romantic Fallback)
+  useEffect(() => {
+    const img1 = new Image();
+    img1.src = ASSETS_CONFIG.primaryBackground;
+    img1.onload = () => {
+      setBgImageSrc(ASSETS_CONFIG.primaryBackground);
+      setUsingFallbackBg(false);
+    };
+    img1.onerror = () => {
+      const img2 = new Image();
+      img2.src = ASSETS_CONFIG.standardBackground;
+      img2.onload = () => {
+        setBgImageSrc(ASSETS_CONFIG.standardBackground);
+        setUsingFallbackBg(false);
+      };
+      img2.onerror = () => {
+        setBgImageSrc(ASSETS_CONFIG.fallbackBackground);
+        setUsingFallbackBg(true);
+      };
+    };
+  }, []);
+
+  // Typing effect for Welcome Screen
+  useEffect(() => {
+    const text1 = 'Hey Komal... ❤️';
+    const text2 = 'Ek baar meri baat sunogi?';
+    let i = 0;
+    let j = 0;
+    let timer2 = null;
+
+    const timer1 = setInterval(() => {
+      i++;
+      setTypedLine1(text1.slice(0, i));
+      if (i >= text1.length) {
+        clearInterval(timer1);
+        timer2 = setInterval(() => {
+          j++;
+          setTypedLine2(text2.slice(0, j));
+          if (j >= text2.length) {
+            clearInterval(timer2);
+          }
+        }, 55);
+      }
+    }, 65);
+
+    return () => {
+      clearInterval(timer1);
+      if (timer2) clearInterval(timer2);
+    };
+  }, []);
+
+  // Rotate song lyrics ticker when music is playing
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      setLyricIndex((prev) => (prev + 1) % SONG_LYRICS.length);
+    }, 5200);
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  // Monitor scroll for Back-to-Top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 450);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Play Music Handler (handles real audio element + fallback synth gracefully)
+  const startMusic = useCallback(async () => {
+    const audioEl = audioRef.current;
+    if (!audioEl) return;
+
+    if (!useSynthFallback) {
+      try {
+        audioEl.muted = isMuted;
+        await audioEl.play();
+        setIsPlaying(true);
+        setAutoplayBlocked(false);
+        return;
+      } catch (err) {
+        // Check if error is NotAllowedError (autoplay policy) vs NotSupported/Source error
+        if (err.name === 'NotAllowedError') {
+          setAutoplayBlocked(true);
+          return;
+        }
+        // Try standard /assets/romantic-song.mp3 before falling back to synth
+        if (audioSrc === ASSETS_CONFIG.primaryAudio) {
+          setAudioSrc(ASSETS_CONFIG.standardAudio);
+        } else {
+          setUseSynthFallback(true);
+          if (synthRef.current) {
+            synthRef.current.setMuted(isMuted);
+            synthRef.current.start();
+            setIsPlaying(true);
+            setAutoplayBlocked(false);
+          }
+        }
+      }
+    } else {
+      if (synthRef.current) {
+        synthRef.current.setMuted(isMuted);
+        synthRef.current.start();
+        setIsPlaying(true);
+        setAutoplayBlocked(false);
+      }
+    }
+  }, [audioSrc, isMuted, useSynthFallback]);
+
+  // Attempt Autoplay on initial mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      startMusic();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [startMusic]);
+
+  // Toggle Play / Pause
+  const togglePlayPause = () => {
+    const audioEl = audioRef.current;
+    if (isPlaying) {
+      if (audioEl && !useSynthFallback) audioEl.pause();
+      if (synthRef.current) synthRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      startMusic();
+    }
+  };
+
+  // Toggle Mute / Unmute
+  const toggleMute = () => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    if (audioRef.current) {
+      audioRef.current.muted = nextMuted;
+    }
+    if (synthRef.current) {
+      synthRef.current.setMuted(nextMuted);
+    }
+  };
+
+  // Trigger Heart Burst Effect
+  const triggerHeartBurst = () => {
+    if (reducedMotion) return;
+    const newHearts = Array.from({ length: 18 }).map((_, idx) => ({
+      id: Date.now() + idx,
+      left: 20 + Math.random() * 60,
+      size: 16 + Math.random() * 22,
+      delay: Math.random() * 0.4,
+      duration: 1.8 + Math.random() * 1.4,
+      emoji: ['❤️', '💖', '💗', '🥺', '✨', '🌸'][idx % 6],
+    }));
+    setBurstHearts(newHearts);
+    setTimeout(() => setBurstHearts([]), 3200);
+  };
+
+  // Handle "Open Your Surprise ❤️" button click
+  const handleOpenSurprise = () => {
+    if (!isPlaying) {
+      startMusic();
+    }
+    triggerHeartBurst();
+    setSurpriseOpened(true);
+    setTimeout(() => {
+      apologySectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 350);
+  };
+
+  // Handle local custom file upload (Photo or Audio)
+  const handleCustomPhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setBgImageSrc(url);
+    setUsingFallbackBg(false);
+  };
+
+  const handleCustomAudioUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    if (synthRef.current) synthRef.current.pause();
+    setUseSynthFallback(false);
+    setAudioSrc(url);
+    setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.load();
+        audioRef.current
+          .play()
+          .then(() => {
+            setIsPlaying(true);
+            setAutoplayBlocked(false);
+          })
+          .catch(() => {});
+      }
+    }, 150);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Special Cards Data (Section 3)
+  const specialCards = [
+    {
+      id: 1,
+      title: 'Your Smile 😊',
+      quote: '"Tumhari smile mere din ko beautiful bana deti hai."',
+      badge: 'My Favorite View',
+      gradient: 'from-pink-500/30 via-rose-500/20 to-purple-600/20',
+      border: 'border-pink-300/40',
+    },
+    {
+      id: 2,
+      title: 'Your Anger 🥺',
+      quote: '"Tumhara gussa bhi cute lagta hai, bas zyada der mat rehna."',
+      badge: 'Cute Nose Scrunch',
+      gradient: 'from-rose-500/30 via-red-500/20 to-pink-600/20',
+      border: 'border-rose-300/40',
+    },
+    {
+      id: 3,
+      title: 'Your Presence ❤️',
+      quote: '"Tumhare hone se har normal moment special ban jaata hai."',
+      badge: 'My Safe Place',
+      gradient: 'from-red-500/30 via-rose-500/20 to-amber-500/20',
+      border: 'border-red-300/40',
+    },
+    {
+      id: 4,
+      title: 'Our Memories ✨',
+      quote: '"Hamare saath bitaye hue moments mere liye bahut precious hain."',
+      badge: 'Forever Cherished',
+      gradient: 'from-purple-500/30 via-pink-500/20 to-rose-500/20',
+      border: 'border-purple-300/40',
+    },
+  ];
+
+  // Interactive Questions Data (Section 5)
+  const loveQuestions = [
+    {
+      key: 'q1',
+      step: 'Question 01',
+      question: 'Komal, kya tum meri baat sunogi? 🥺',
+      optA: {
+        label: 'Haan, bolo ❤️',
+        response:
+          'Thank you meri baat sunne ke liye! Tum sach mein duniya ki sabse achhi aur pyari ladki ho ❤️🥹',
+        tone: 'positive',
+      },
+      optB: {
+        label: 'Abhi nahi 😒',
+        response:
+          'Koi baat nahi, take all your time ❤️ Main yahin wait karunga jab tak tumhara gussa thanda na ho jaye 🥺💗',
+        tone: 'sweet',
+      },
+    },
+    {
+      key: 'q2',
+      step: 'Question 02',
+      question: 'Ek chhoti si smile milegi? 😊',
+      optA: {
+        label: 'Okay ❤️',
+        response:
+          'Haaye! Ab jaake dil ko sukoon mila! Tumhari is smile pe toh main hazaar baar dil haar jaaun 😊✨❤️',
+        tone: 'positive',
+      },
+      optB: {
+        label: 'Sochungi 🙈',
+        response:
+          'Sochne mein bhi kitni cute lagti ho tum! Par jaldi se smile kar dena please, meri jaan 🌸😊',
+        tone: 'sweet',
+      },
+    },
+    {
+      key: 'q3',
+      step: 'Question 03',
+      question: 'Can I have one more chance to make things better? 🥺',
+      optA: {
+        label: 'Yes ❤️',
+        response:
+          'Thank you so much, Komal! I promise main apni har galti sudharunga aur tumhe hamesha khush rakhunga! ❤️🤞',
+        tone: 'positive',
+      },
+      optB: {
+        label: 'Let me think 💗',
+        response:
+          'Poora time le lo! Mera pyaar aur tumhe manane ki koshish kabhi kam nahi hogi. You mean everything to me 💞✨',
+        tone: 'sweet',
+      },
+    },
+  ];
+
+  // Background Floating Particles
+  const floatingParticles = Array.from({ length: 16 }).map((_, i) => ({
+    id: i,
+    left: `${(i * 6.5) % 96}%`,
+    size: 14 + (i % 4) * 6,
+    duration: 11 + (i % 5) * 3,
+    delay: (i * 0.9) % 8,
+    symbol: i % 3 === 0 ? '❤️' : i % 3 === 1 ? '💗' : '✨',
+  }));
+
+  return (
+    <div className="relative min-h-screen w-full overflow-x-hidden text-rose-50 selection:bg-rose-500 selection:text-white font-sans">
+      {/* Google Fonts & Custom Keyframe Animations */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Dancing+Script:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+        .font-serif-romantic {
+          font-family: 'Cormorant Garamond', Georgia, serif;
+        }
+        .font-handwritten {
+          font-family: 'Dancing Script', cursive;
+        }
+        .font-sans {
+          font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        @keyframes floatUpwards {
+          0% {
+            transform: translateY(105vh) scale(0.7) rotate(0deg);
+            opacity: 0;
+          }
+          15% {
+            opacity: 0.65;
+          }
+          85% {
+            opacity: 0.65;
+          }
+          100% {
+            transform: translateY(-12vh) scale(1.15) rotate(20deg);
+            opacity: 0;
+          }
+        }
+
+        @keyframes heartBurst {
+          0% {
+            transform: translateY(0) scale(0.4);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-320px) scale(1.5);
+            opacity: 0;
+          }
+        }
+
+        @keyframes heartbeatGlow {
+          0%, 100% {
+            transform: scale(1);
+            filter: drop-shadow(0 0 18px rgba(244, 63, 94, 0.7));
+          }
+          30% {
+            transform: scale(1.14);
+            filter: drop-shadow(0 0 32px rgba(251, 113, 133, 0.95));
+          }
+          50% {
+            transform: scale(1.04);
+          }
+          70% {
+            transform: scale(1.18);
+            filter: drop-shadow(0 0 40px rgba(244, 63, 94, 1));
+          }
+        }
+
+        @keyframes equalizerBar {
+          0%, 100% { height: 5px; }
+          50% { height: 18px; }
+        }
+
+        @keyframes softPulseGlow {
+          0%, 100% {
+            box-shadow: 0 0 25px rgba(244, 63, 94, 0.45), inset 0 0 15px rgba(255, 255, 255, 0.2);
+          }
+          50% {
+            box-shadow: 0 0 42px rgba(244, 63, 94, 0.8), inset 0 0 22px rgba(255, 255, 255, 0.35);
+          }
+        }
+
+        .animate-float-particle {
+          animation: floatUpwards linear infinite;
+        }
+        .animate-heartbeat {
+          animation: heartbeatGlow 2.1s ease-in-out infinite;
+        }
+        .animate-glow-btn {
+          animation: softPulseGlow 2.6s ease-in-out infinite;
+        }
+
+        /* Responsive Portrait-Optimized Background Positioning so Komal's face stays centered & clear */
+        .komal-bg-image {
+          background-size: cover;
+          background-repeat: no-repeat;
+          background-position: center 22%;
+        }
+        @media (max-width: 768px) {
+          .komal-bg-image {
+            background-position: center 18%;
+          }
+        }
+      `}</style>
+
+      {/* =====================================================================
+          HIDDEN LOOPING AUDIO ELEMENT (Supports video_1.mpeg & romantic-song.mp3)
+         ===================================================================== */}
+      <audio
+        ref={audioRef}
+        src={audioSrc}
+        loop
+        preload="auto"
+        onError={() => {
+          if (audioSrc === ASSETS_CONFIG.primaryAudio) {
+            setAudioSrc(ASSETS_CONFIG.standardAudio);
+          } else {
+            setUseSynthFallback(true);
+            if (isPlaying && synthRef.current) {
+              synthRef.current.start();
+            }
+          }
+        }}
+      />
+
+      {/* =====================================================================
+          FIXED FULL-SCREEN BACKGROUND IMAGE + ROMANTIC READABILITY OVERLAY
+         ===================================================================== */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        {/* Main Uploaded Background Layer */}
+        <div
+          className="absolute inset-0 komal-bg-image transition-all duration-1000 scale-105"
+          style={{
+            backgroundImage: `url("${bgImageSrc}")`,
+          }}
+        />
+        {/* Soft Rose & Deep Romantic Vignette Overlay — keeps Komal's portrait visible while ensuring 100% text legibility */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(28, 6, 18, 0.52) 0%, rgba(45, 8, 26, 0.64) 45%, rgba(24, 4, 15, 0.84) 100%)',
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-tr from-rose-950/50 via-transparent to-pink-900/30" />
+      </div>
+
+      {/* =====================================================================
+          FLOATING HEART & SPARKLE PARTICLES
+         ===================================================================== */}
+      {!reducedMotion && (
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+          {floatingParticles.map((p) => (
+            <span
+              key={p.id}
+              className="absolute bottom-0 select-none animate-float-particle"
+              style={{
+                left: p.left,
+                fontSize: `${p.size}px`,
+                animationDuration: `${p.duration}s`,
+                animationDelay: `${p.delay}s`,
+                filter: 'drop-shadow(0 0 8px rgba(251, 113, 133, 0.6))',
+              }}
+            >
+              {p.symbol}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Burst Hearts on Surprise Click */}
+      {burstHearts.length > 0 && (
+        <div className="fixed inset-0 z-50 pointer-events-none overflow-hidden">
+          {burstHearts.map((bh) => (
+            <span
+              key={bh.id}
+              className="absolute bottom-1/3 select-none"
+              style={{
+                left: `${bh.left}%`,
+                fontSize: `${bh.size}px`,
+                animation: `heartBurst ${bh.duration}s ease-out ${bh.delay}s forwards`,
+              }}
+            >
+              {bh.emoji}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* =====================================================================
+          TOP NAVIGATION / FLOATING CONTROLS BAR
+         ===================================================================== */}
+      <header className="fixed top-0 left-0 right-0 z-40 px-4 py-3 sm:px-6 flex items-center justify-between pointer-events-none">
+        {/* Left: Discreet Custom Photo/Song Loader & Reduced Motion Toggle */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <button
+            onClick={() => setShowAssetModal(true)}
+            title="Set or Preview Your Photo & Song"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-rose-950/75 hover:bg-rose-900/90 text-rose-100 border border-pink-300/30 backdrop-blur-md shadow-lg text-xs font-medium transition-all active:scale-95"
+          >
+            <Camera className="w-3.5 h-3.5 text-pink-300" />
+            <span className="hidden sm:inline">Photo & Song</span>
+          </button>
+
+          <button
+            onClick={() => setReducedMotion(!reducedMotion)}
+            title={reducedMotion ? 'Enable Animations' : 'Reduce Motion'}
+            className="p-2 rounded-full bg-rose-950/75 hover:bg-rose-900/90 text-rose-200 border border-pink-300/30 backdrop-blur-md shadow-lg text-xs transition-all active:scale-95"
+            aria-label="Toggle Reduced Motion"
+          >
+            {reducedMotion ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+
+        {/* Center/Right: Autoplay Blocked Prompt OR Active Music Controls */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {autoplayBlocked && !isPlaying ? (
+            <button
+              onClick={startMusic}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-red-500 text-white font-semibold text-xs sm:text-sm shadow-xl border border-white/30 animate-glow-btn transition-transform active:scale-95"
+            >
+              <Music className="w-4 h-4 animate-bounce" />
+              <span>Tap to Play Our Song ❤️</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-950/80 border border-pink-300/35 backdrop-blur-md shadow-xl">
+              {/* Play/Pause Button */}
+              <button
+                onClick={togglePlayPause}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-semibold hover:opacity-95 transition active:scale-95"
+                aria-label={isPlaying ? 'Pause Music' : 'Play Music'}
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                <span>{isPlaying ? 'Playing' : 'Play Song'}</span>
+              </button>
+
+              {/* Animated Equalizer Visualizer */}
+              <div className="flex items-end gap-0.5 h-4 px-1.5" aria-hidden="true">
+                {[0.6, 1.0, 0.75, 1.15].map((speed, idx) => (
+                  <span
+                    key={idx}
+                    className="w-1 rounded-full bg-pink-300 transition-all"
+                    style={{
+                      height: isPlaying && !isMuted ? '14px' : '4px',
+                      animation:
+                        isPlaying && !isMuted && !reducedMotion
+                          ? `equalizerBar ${speed}s ease-in-out infinite`
+                          : 'none',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Mute/Unmute Button */}
+              <button
+                onClick={toggleMute}
+                className="p-1.5 rounded-full hover:bg-white/10 text-pink-200 transition"
+                aria-label={isMuted ? 'Unmute Music' : 'Mute Music'}
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Subtle Floating Song Lyrics Banner when music is playing */}
+      {isPlaying && !isMuted && (
+        <div className="fixed bottom-4 left-4 right-16 sm:right-auto sm:max-w-md z-30 pointer-events-none">
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-rose-950/75 border border-pink-300/25 backdrop-blur-md text-pink-100/95 text-xs sm:text-sm shadow-lg transition-all duration-500">
+            <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping shrink-0" />
+            <p className="truncate italic font-serif-romantic tracking-wide">
+              {SONG_LYRICS[lyricIndex]}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SECTION 1: ROMANTIC WELCOME SCREEN
+         ===================================================================== */}
+      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-20 text-center">
+        <div className="max-w-xl w-full mx-auto rounded-3xl bg-rose-950/45 border border-pink-200/25 backdrop-blur-md p-6 sm:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+          {/* Glowing Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-500/20 border border-pink-300/35 text-pink-200 text-xs sm:text-sm font-medium mb-6">
+            <Sparkles className="w-4 h-4 text-pink-300 animate-spin" style={{ animationDuration: '6s' }} />
+            <span>For My Komal ❤️ • I AM SORRY, KOMAL. ❤️</span>
+          </div>
+
+          {/* Framed Mini Portrait Preview of Komal */}
+          <div className="relative w-28 h-28 sm:w-36 sm:h-36 mx-auto mb-6 rounded-full p-1 bg-gradient-to-tr from-rose-500 via-pink-300 to-red-500 shadow-[0_0_35px_rgba(244,63,94,0.65)]">
+            <div
+              className="w-full h-full rounded-full bg-cover bg-center border-2 border-rose-950"
+              style={{
+                backgroundImage: `url("${bgImageSrc}")`,
+                backgroundPosition: 'center 20%',
+              }}
+            />
+            <span className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-rose-600 border-2 border-pink-200 flex items-center justify-center text-lg shadow-lg animate-bounce">
+              ❤️
+            </span>
+          </div>
+
+          {/* Animated Typing Welcome Headings */}
+          <h1 className="font-serif-romantic text-4xl sm:text-6xl font-bold text-white tracking-tight mb-3 drop-shadow-[0_2px_12px_rgba(244,63,94,0.6)] min-h-[2.75rem] sm:min-h-[4rem]">
+            {typedLine1}
+          </h1>
+
+          <p className="font-serif-romantic italic text-2xl sm:text-3xl text-pink-200 mb-4 min-h-[2.25rem]">
+            {typedLine2}
+          </p>
+
+          <p className="text-rose-100/90 text-sm sm:text-base max-w-md mx-auto mb-8 leading-relaxed">
+            I made something special just for you. Please غصہ thoda sa side rakh ke ek baar ise poora dekhna... 🥺💗
+          </p>
+
+          {/* Main CTA Button */}
+          <button
+            onClick={handleOpenSurprise}
+            className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-red-500 text-white font-bold text-base sm:text-lg shadow-2xl border border-pink-200/50 animate-glow-btn hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+          >
+            <span>Open Your Surprise ❤️</span>
+            <Heart className="w-5 h-5 fill-white group-hover:scale-125 transition-transform" />
+          </button>
+
+          {surpriseOpened && (
+            <p className="mt-4 text-xs text-pink-200/80 animate-pulse">
+              ✨ Scroll down slowly, Komal... har ek lafz tumhare liye hai ❤️
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* =====================================================================
+          MAIN STORY CONTENT (Smoothly revealed & scrollable)
+         ===================================================================== */}
+      <main
+        className={`relative z-10 transition-all duration-1000 ${
+          surpriseOpened
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-95 translate-y-0'
+        }`}
+      >
+        {/* ===================================================================
+            SECTION 2: EMOTIONAL APOLOGY + PORTRAIT SHOWCASE
+           =================================================================== */}
+        <section
+          ref={apologySectionRef}
+          className="py-16 sm:py-24 px-4 sm:px-6 max-w-5xl mx-auto"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center rounded-3xl bg-rose-950/55 border border-pink-200/25 backdrop-blur-xl p-6 sm:p-10 md:p-12 shadow-[0_25px_70px_rgba(0,0,0,0.6)] relative overflow-hidden">
+            {/* Subtle decorative corner hearts */}
+            <div className="absolute -top-6 -right-6 text-7xl opacity-15 select-none pointer-events-none">
+              ❤️
+            </div>
+            <div className="absolute -bottom-6 -left-6 text-7xl opacity-15 select-none pointer-events-none">
+              🌸
+            </div>
+
+            {/* Portrait Frame Column */}
+            <div className="lg:col-span-5 flex flex-col items-center">
+              <div className="relative w-full max-w-[290px] aspect-[3/4] rounded-2xl p-1.5 bg-gradient-to-b from-pink-300 via-rose-500 to-red-700 shadow-[0_0_40px_rgba(244,63,94,0.45)] group overflow-hidden">
+                <div
+                  className="w-full h-full rounded-xl bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                  style={{
+                    backgroundImage: `url("${bgImageSrc}")`,
+                    backgroundPosition: 'center 20%',
+                  }}
+                />
+                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-rose-950/90 via-rose-950/50 to-transparent rounded-b-xl text-center">
+                  <p className="font-handwritten text-xl sm:text-2xl text-pink-200">
+                    My Favorite Person, Komal ❤️
+                  </p>
+                </div>
+              </div>
+
+              {usingFallbackBg && (
+                <button
+                  onClick={() => setShowAssetModal(true)}
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs text-pink-300 hover:text-white underline underline-offset-4"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Tap here to load Komal&apos;s photo from your device</span>
+                </button>
+              )}
+            </div>
+
+            {/* Emotional Apology Text Column */}
+            <div className="lg:col-span-7 text-left space-y-5">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-500/25 border border-rose-300/30 text-pink-200 text-xs font-semibold uppercase tracking-wider">
+                <MessageCircleHeart className="w-4 h-4 text-rose-300" />
+                <span>Dil Se Ek Baat</span>
+              </div>
+
+              <h2 className="font-serif-romantic text-3xl sm:text-5xl font-bold text-white leading-tight drop-shadow">
+                Komal, I&apos;m Really Sorry! 🥺
+              </h2>
+
+              <div className="space-y-4 text-rose-100/95 text-base sm:text-lg leading-relaxed font-normal">
+                <p>
+                  Shayad mujhse kuch galti ho gayi, shayad meri kisi baat se tumhara dil dukha ho.
+                  Mera intention kabhi bhi tumhe hurt karna nahi tha.
+                </p>
+                <p>
+                  Main jaanta hoon ki sirf <span className="text-pink-300 font-semibold">Sorry</span> bolne se sab kuch theek nahi hota,
+                  lekin main sach mein apni galti samajhna chahta hoon.
+                </p>
+                <p>
+                  Tumhari smile mere liye bahut special hai. Main bas itna chahta hoon ki tum ek baar meri baat sun lo.
+                </p>
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center gap-4">
+                <div className="px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-600/40 to-pink-600/40 border border-pink-300/35">
+                  <p className="font-serif-romantic italic text-xl sm:text-2xl text-white font-semibold">
+                    &ldquo;I&apos;m really sorry, Komal. ❤️&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================================================
+            SECTION 3: WHY YOU ARE SPECIAL (4 ANIMATED CARDS)
+           =================================================================== */}
+        <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-5xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-xs uppercase tracking-widest text-pink-300 font-semibold">
+              Everything About You
+            </span>
+            <h2 className="font-serif-romantic text-3xl sm:text-5xl font-bold text-white mt-2 drop-shadow">
+              Do You Know How Special You Are? ❤️
+            </h2>
+            <p className="text-rose-200/85 text-sm sm:text-base mt-3">
+              Tumhari har ek chhoti si aadat mere dil ke bahut kareeb hai...
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {specialCards.map((card) => (
+              <div
+                key={card.id}
+                onClick={triggerHeartBurst}
+                className={`group relative rounded-3xl bg-gradient-to-br ${card.gradient} bg-rose-950/60 border ${card.border} backdrop-blur-xl p-6 sm:p-8 shadow-xl hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(244,63,94,0.35)] active:scale-[0.99] transition-all duration-300 cursor-pointer overflow-hidden`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs text-pink-200 font-medium">
+                    {card.badge}
+                  </span>
+                  <Heart className="w-5 h-5 text-pink-300 group-hover:fill-pink-400 group-hover:scale-125 transition-all" />
+                </div>
+
+                <h3 className="font-serif-romantic text-2xl sm:text-3xl font-bold text-white mb-3">
+                  {card.title}
+                </h3>
+
+                <p className="text-rose-100/95 text-base sm:text-lg leading-relaxed italic">
+                  {card.quote}
+                </p>
+
+                <div className="mt-5 flex items-center gap-1.5 text-xs text-pink-300/80">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Tap card to send love ❤️</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ===================================================================
+            SECTION 4: A LITTLE LOVE LETTER (INTERACTIVE ENVELOPE)
+           =================================================================== */}
+        <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-3xl mx-auto">
+          <div className="text-center mb-10">
+            <span className="text-xs uppercase tracking-widest text-pink-300 font-semibold">
+              Written From My Heart
+            </span>
+            <h2 className="font-serif-romantic text-3xl sm:text-5xl font-bold text-white mt-2 drop-shadow">
+              A Letter Just For You, Komal 💌
+            </h2>
+          </div>
+
+          {/* Envelope Wrapper */}
+          <div className="relative mx-auto max-w-2xl">
+            {!envelopeOpen ? (
+              /* Sealed Romantic Envelope State */
+              <div
+                onClick={() => {
+                  setEnvelopeOpen(true);
+                  triggerHeartBurst();
+                }}
+                className="group relative rounded-3xl bg-gradient-to-b from-rose-900/80 via-rose-950/90 to-rose-950 border-2 border-pink-300/40 backdrop-blur-xl p-8 sm:p-14 text-center shadow-[0_25px_70px_rgba(0,0,0,0.65)] cursor-pointer hover:border-pink-300/80 transition-all duration-500 overflow-hidden"
+              >
+                {/* Envelope Flap Lines */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-pink-500/20 to-transparent pointer-events-none"
+                  style={{
+                    clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+                  }}
+                />
+
+                {/* Wax Seal Button */}
+                <div className="relative z-10 w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-full bg-gradient-to-br from-red-500 via-rose-600 to-red-800 border-4 border-pink-200/60 shadow-[0_0_35px_rgba(244,63,94,0.85)] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Mail className="w-9 h-9 sm:w-10 sm:h-10 text-white" />
+                </div>
+
+                <h3 className="font-serif-romantic text-2xl sm:text-3xl font-bold text-white mb-2">
+                  To: My Dearest Komal ❤️
+                </h3>
+                <p className="text-pink-200/85 text-sm sm:text-base mb-6">
+                  Is lifafe mein mere dil ki woh baatein hain jo main shayad saamne bol nahi paata...
+                </p>
+
+                <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/15 hover:bg-white/25 border border-pink-200/40 text-white font-semibold text-sm transition">
+                  <MailOpen className="w-4 h-4 text-pink-300" />
+                  <span>Tap to Open Your Letter 💌</span>
+                </span>
+              </div>
+            ) : (
+              /* Opened Handwritten Paper Letter State */
+              <div className="relative rounded-3xl bg-[#fff9f5] text-rose-950 border-4 border-pink-300/70 p-6 sm:p-10 md:p-12 shadow-[0_30px_80px_rgba(0,0,0,0.75)] transition-all duration-500">
+                {/* Decorative paper lines & stamp */}
+                <div className="flex items-center justify-between border-b border-rose-200 pb-4 mb-6">
+                  <div className="flex items-center gap-2 text-rose-700">
+                    <MailOpen className="w-5 h-5" />
+                    <span className="text-xs font-semibold uppercase tracking-widest">
+                      Personal Love Note
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setEnvelopeOpen(false)}
+                    className="text-xs text-rose-600 hover:text-rose-900 font-medium px-3 py-1 rounded-full bg-rose-100 hover:bg-rose-200 transition"
+                  >
+                    Close Envelope ✉️
+                  </button>
+                </div>
+
+                {/* Handwritten Letter Body */}
+                <div className="font-handwritten text-2xl sm:text-3xl leading-relaxed text-rose-950 space-y-4">
+                  <p className="font-bold text-3xl sm:text-4xl text-rose-700">
+                    Dear Komal,
+                  </p>
+                  <p>
+                    Kabhi kabhi main apni feelings sahi se express nahi kar pata.
+                    Lekin iska matlab ye nahi ki tum mere liye important nahi ho.
+                  </p>
+                  <p>
+                    Main perfect nahi hoon, mujhse mistakes hoti hain. Lekin main tumhe samajhna chahta hoon,
+                    tumhari feelings ki respect karna chahta hoon aur apne actions se tumhe better feel karwana chahta hoon.
+                  </p>
+                  <p className="text-rose-700 font-bold">
+                    Bas ek request hai...
+                    <br />
+                    Please ek baar muskura do. ❤️
+                  </p>
+                  <div className="pt-4 text-right">
+                    <p className="text-rose-600">Yours,</p>
+                    <p className="text-3xl sm:text-4xl font-bold text-rose-800">
+                      Your Pagal Boy ❤️
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ===================================================================
+            SECTION 5: INTERACTIVE LOVE QUESTIONS (RESPECTFUL & PLAYFUL)
+           =================================================================== */}
+        <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="text-xs uppercase tracking-widest text-pink-300 font-semibold">
+              Little Heart-to-Heart
+            </span>
+            <h2 className="font-serif-romantic text-3xl sm:text-5xl font-bold text-white mt-2 drop-shadow">
+              Kuch Chhote Se Sawaal... 👉👈
+            </h2>
+            <p className="text-rose-200/85 text-sm sm:text-base mt-2">
+              Jo bhi tumhare dil mein ho, sach-sach click karna ❤️
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            {loveQuestions.map((q) => {
+              const selected = answers[q.key];
+              return (
+                <div
+                  key={q.key}
+                  className="rounded-3xl bg-rose-950/60 border border-pink-200/30 backdrop-blur-xl p-6 sm:p-8 shadow-xl transition-all"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold uppercase tracking-wider text-pink-300 bg-pink-500/20 px-3 py-1 rounded-full border border-pink-300/30">
+                      {q.step}
+                    </span>
+                    {selected && (
+                      <span className="text-xs text-emerald-300 flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4" /> Answered
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="font-serif-romantic text-2xl sm:text-3xl font-bold text-white mb-6">
+                    {q.question}
+                  </h3>
+
+                  <div className="flex flex-wrap gap-3 sm:gap-4">
+                    {/* Option A */}
+                    <button
+                      onClick={() => {
+                        setAnswers((prev) => ({ ...prev, [q.key]: 'A' }));
+                        triggerHeartBurst();
+                      }}
+                      className={`flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl font-semibold text-sm sm:text-base transition-all active:scale-95 cursor-pointer ${
+                        selected === 'A'
+                          ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-[0_0_25px_rgba(244,63,94,0.7)] border border-white/50'
+                          : 'bg-white/10 hover:bg-white/20 text-rose-100 border border-pink-200/30'
+                      }`}
+                    >
+                      {q.optA.label}
+                    </button>
+
+                    {/* Option B */}
+                    <button
+                      onClick={() => {
+                        setAnswers((prev) => ({ ...prev, [q.key]: 'B' }));
+                      }}
+                      className={`flex-1 min-w-[140px] py-3.5 px-5 rounded-2xl font-semibold text-sm sm:text-base transition-all active:scale-95 cursor-pointer ${
+                        selected === 'B'
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_0_25px_rgba(192,132,252,0.6)] border border-white/50'
+                          : 'bg-white/10 hover:bg-white/20 text-rose-100 border border-pink-200/30'
+                      }`}
+                    >
+                      {q.optB.label}
+                    </button>
+                  </div>
+
+                  {/* Affectionate Response Message */}
+                  {selected && (
+                    <div className="mt-5 p-4 rounded-2xl bg-rose-900/50 border border-pink-300/35 text-pink-100 text-sm sm:text-base leading-relaxed animate-fadeIn">
+                      {selected === 'A' ? q.optA.response : q.optB.response}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ===================================================================
+            SECTION 6: FINAL SURPRISE (DRAMATIC GLOWING HEART)
+           =================================================================== */}
+        <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-4xl mx-auto text-center">
+          <div className="rounded-3xl bg-gradient-to-b from-rose-900/65 via-rose-950/75 to-black/75 border border-pink-300/35 backdrop-blur-xl p-8 sm:p-14 shadow-[0_25px_80px_rgba(244,63,94,0.3)]">
+            {/* Large Glowing Animated Heart */}
+            <div className="my-4 inline-flex items-center justify-center">
+              <div className="relative flex items-center justify-center w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-rose-500/20 border border-pink-300/30 animate-heartbeat">
+                <Heart className="w-16 h-16 sm:w-20 sm:h-20 text-rose-500 fill-rose-500" />
+              </div>
+            </div>
+
+            <h2 className="font-serif-romantic text-4xl sm:text-6xl font-bold text-white mt-4 mb-6 drop-shadow-[0_2px_18px_rgba(244,63,94,0.8)]">
+              Komal, You Are Special To Me! ❤️
+            </h2>
+
+            <div className="max-w-2xl mx-auto space-y-4 text-rose-100 text-lg sm:text-xl leading-relaxed">
+              <p>
+                Main tumhe sirf manana nahi chahta, main tumhe samajhna bhi chahta hoon.
+              </p>
+              <p className="font-semibold text-pink-300 text-xl sm:text-2xl">
+                I am sorry for everything.
+              </p>
+              <p className="font-serif-romantic italic text-2xl sm:text-3xl text-white pt-2">
+                Can we start with a smile? 🥺❤️
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ===================================================================
+            SECTION 7: FINAL FORGIVENESS INTERACTION
+           =================================================================== */}
+        <section className="pt-8 pb-28 px-4 sm:px-6 max-w-3xl mx-auto text-center">
+          <div className="rounded-3xl bg-rose-950/75 border-2 border-pink-300/45 backdrop-blur-xl p-8 sm:p-12 shadow-2xl">
+            <Sparkles className="w-8 h-8 text-pink-300 mx-auto mb-3" />
+            <h2 className="font-serif-romantic text-3xl sm:text-5xl font-bold text-white mb-4">
+              Will You Forgive Me, Komal? ❤️
+            </h2>
+            <p className="text-rose-200/90 text-sm sm:text-base mb-8">
+              Tumhara jo bhi faisla ho, mera pyaar tumhare liye hamesha waisa hi rahega 💗
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
+                onClick={() => {
+                  setForgivenessStatus('forgiven');
+                  triggerHeartBurst();
+                }}
+                className="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-red-500 text-white font-bold text-base sm:text-lg shadow-xl border border-pink-200/50 animate-glow-btn hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              >
+                I Forgive You ❤️
+              </button>
+
+              <button
+                onClick={() => {
+                  setForgivenessStatus('manana');
+                }}
+                className="w-full sm:w-auto px-8 py-4 rounded-full bg-white/15 hover:bg-white/25 text-pink-100 font-semibold text-base sm:text-lg border border-pink-200/40 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              >
+                Thoda Aur Manana Padega 😜
+              </button>
+            </div>
+
+            {/* Playful "Thoda Aur Manana Padega" Inline Card */}
+            {forgivenessStatus === 'manana' && (
+              <div className="mt-8 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-rose-900/90 via-pink-950/90 to-purple-950/90 border border-pink-300/50 text-left shadow-2xl transition-all">
+                <div className="flex items-start gap-3">
+                  <span className="text-3xl">😌❤️</span>
+                  <div>
+                    <h4 className="font-serif-romantic text-2xl sm:text-3xl font-bold text-white mb-2">
+                      Challenge Accepted! 😌❤️
+                    </h4>
+                    <p className="text-rose-100 text-base sm:text-lg leading-relaxed mb-5">
+                      Main tumhe tab tak manata rahunga jab tak tumhare chehre pe smile na aa jaye.
+                      Tab tak ke liye apni special &ldquo;Manana Treats&rdquo; select kar lo:
+                    </p>
+                  </div>
+                </div>
+
+                {/* Extra Manana Perks */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                  {[
+                    '🍫 Unlimited Favorite Chocolates',
+                    '🧋 Ice Cream / Cold Coffee Date',
+                    '🎧 100% Patient Listening (No Excuses)',
+                    '🤗 Tightest Bear Hug Whenever You Say',
+                  ].map((perk) => {
+                    const claimed = extraCouponsClaimed.includes(perk);
+                    return (
+                      <button
+                        key={perk}
+                        onClick={() => {
+                          if (!claimed) {
+                            setExtraCouponsClaimed([...extraCouponsClaimed, perk]);
+                            triggerHeartBurst();
+                          }
+                        }}
+                        className={`p-3 rounded-xl text-xs sm:text-sm font-medium text-left border transition flex items-center justify-between ${
+                          claimed
+                            ? 'bg-pink-500/35 border-pink-300 text-white'
+                            : 'bg-white/10 border-white/20 text-rose-100 hover:bg-white/20'
+                        }`}
+                      >
+                        <span>{perk}</span>
+                        {claimed && <CheckCircle2 className="w-4 h-4 text-pink-200 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() => {
+                      setForgivenessStatus('forgiven');
+                      triggerHeartBurst();
+                    }}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold text-sm shadow-lg hover:scale-105 transition cursor-pointer"
+                  >
+                    <Smile className="w-4 h-4" />
+                    <span>Okay Chalo, Ab Maaf Kiya! ❤️</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <footer className="mt-14 text-center text-xs sm:text-sm text-pink-200/75 space-y-1">
+            <p className="font-serif-romantic text-lg text-pink-200">
+              Made with all my love, only for Komal ❤️
+            </p>
+            <p>I AM SORRY, KOMAL. ❤️</p>
+          </footer>
+        </section>
+      </main>
+
+      {/* =====================================================================
+          FULL-SCREEN CELEBRATION OVERLAY ("I FORGIVE YOU ❤️")
+         ===================================================================== */}
+      {forgivenessStatus === 'forgiven' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-rose-950/85 backdrop-blur-xl animate-fadeIn">
+          {/* Celebration Confetti Hearts */}
+          {!reducedMotion && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {Array.from({ length: 28 }).map((_, idx) => (
+                <span
+                  key={idx}
+                  className="absolute bottom-0 select-none animate-float-particle"
+                  style={{
+                    left: `${(idx * 3.7) % 98}%`,
+                    fontSize: `${18 + (idx % 4) * 8}px`,
+                    animationDuration: `${4 + (idx % 4) * 1.5}s`,
+                    animationDelay: `${(idx * 0.15) % 2}s`,
+                  }}
+                >
+                  {['❤️', '💖', '🥹', '✨', '🌸', '🎉'][idx % 6]}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="relative z-10 max-w-lg w-full rounded-3xl bg-gradient-to-b from-rose-900 via-rose-950 to-black border-2 border-pink-300/60 p-6 sm:p-10 text-center shadow-[0_0_80px_rgba(244,63,94,0.8)]">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-5 rounded-full p-1 bg-gradient-to-tr from-rose-400 via-pink-300 to-red-500 shadow-2xl">
+              <div
+                className="w-full h-full rounded-full bg-cover bg-center"
+                style={{
+                  backgroundImage: `url("${bgImageSrc}")`,
+                  backgroundPosition: 'center 20%',
+                }}
+              />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-pink-500/25 border border-pink-300/40 text-pink-200 text-xs font-semibold mb-3">
+              <Stars className="w-4 h-4" />
+              <span>Best Moment Ever!</span>
+            </div>
+
+            <h2 className="font-serif-romantic text-3xl sm:text-5xl font-bold text-white mb-4">
+              Yayyy! Thank You, Komal! ❤️🥹
+            </h2>
+
+            <p className="text-rose-100 text-base sm:text-lg leading-relaxed mb-6">
+              Tumne maaf kar diya, ab meri jaan mein jaan aayi!
+              I promise main tumhari is pyari si smile ko hamesha sambhal ke rakhunga.
+              <br />
+              <span className="font-bold text-pink-300 block mt-2 text-xl">
+                I Love You So Much, Komal! ❤️
+              </span>
+            </p>
+
+            {extraCouponsClaimed.length > 0 && (
+              <div className="mb-6 p-3.5 rounded-2xl bg-white/10 border border-pink-200/30 text-xs sm:text-sm text-pink-200">
+                <p className="font-semibold text-white mb-1 flex items-center justify-center gap-1">
+                  <Gift className="w-4 h-4 text-pink-300" /> Your Claimed Treats:
+                </p>
+                <p>{extraCouponsClaimed.join(' • ')}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={triggerHeartBurst}
+                className="px-6 py-3 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white font-bold text-sm shadow-lg hover:scale-105 transition cursor-pointer"
+              >
+                Shower More Hearts 💖
+              </button>
+              <button
+                onClick={() => setForgivenessStatus(null)}
+                className="px-5 py-3 rounded-full bg-white/15 hover:bg-white/25 text-rose-100 text-sm font-medium transition cursor-pointer"
+              >
+                Back to Our Page ✨
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          CUSTOM PHOTO & SONG QUICK-LOADER MODAL (For Instant Sandbox Preview)
+         ===================================================================== */}
+      {showAssetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+          <div className="relative max-w-md w-full rounded-3xl bg-rose-950 border border-pink-300/40 p-6 sm:p-8 text-rose-50 shadow-2xl">
+            <button
+              onClick={() => setShowAssetModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-pink-200"
+              aria-label="Close Modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2 text-pink-300 text-xs font-semibold uppercase tracking-wider mb-2">
+              <Settings2 className="w-4 h-4" />
+              <span>Asset Customizer</span>
+            </div>
+
+            <h3 className="font-serif-romantic text-2xl sm:text-3xl font-bold text-white mb-2">
+              Komal&apos;s Photo & Song ❤️
+            </h3>
+            <p className="text-xs sm:text-sm text-rose-200/85 mb-5 leading-relaxed">
+              Your files (<code className="text-pink-300">WhatsApp Image 2026-11-10 at 2.54.38 PM.jpeg</code> &{' '}
+              <code className="text-pink-300">video_1.mpeg</code> / <code className="text-pink-300">/assets/...</code>)
+              are permanently set in the code. You can also select them directly from your phone or PC right now to preview immediately:
+            </p>
+
+            <div className="space-y-4">
+              {/* Upload Background Photo */}
+              <label className="block p-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-pink-300/35 cursor-pointer transition">
+                <span className="flex items-center gap-2 font-semibold text-sm text-white mb-1">
+                  <Camera className="w-4 h-4 text-pink-300" />
+                  1. Select Komal&apos;s Background Photo
+                </span>
+                <span className="block text-xs text-rose-200/80 mb-2">
+                  Choose <code>WhatsApp Image 2026-11-10 at 2.54.38 PM.jpeg</code>
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCustomPhotoUpload}
+                  className="block w-full text-xs text-pink-200 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-rose-500 file:text-white hover:file:bg-rose-600"
+                />
+              </label>
+
+              {/* Upload Romantic Song */}
+              <label className="block p-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-pink-300/35 cursor-pointer transition">
+                <span className="flex items-center gap-2 font-semibold text-sm text-white mb-1">
+                  <Music className="w-4 h-4 text-pink-300" />
+                  2. Select Romantic Song Audio/Video
+                </span>
+                <span className="block text-xs text-rose-200/80 mb-2">
+                  Choose <code>video_1.mpeg</code> or your MP3/audio file
+                </span>
+                <input
+                  type="file"
+                  accept="audio/*,video/*"
+                  onChange={handleCustomAudioUpload}
+                  className="block w-full text-xs text-pink-200 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-pink-500 file:text-white hover:file:bg-pink-600"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 text-right">
+              <button
+                onClick={() => setShowAssetModal(false)}
+                className="px-6 py-2.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold text-sm shadow-lg"
+              >
+                Done ❤️
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          BACK TO TOP FLOATING BUTTON
+         ===================================================================== */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          aria-label="Scroll to top"
+          className="fixed bottom-4 right-4 z-40 p-3 rounded-full bg-rose-600/90 hover:bg-rose-500 text-white border border-pink-200/40 shadow-xl backdrop-blur-md transition-all hover:scale-110 active:scale-95 cursor-pointer"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </button>
+      )}
+    </div>
+  );
+}
